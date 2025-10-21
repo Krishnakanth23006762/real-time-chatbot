@@ -21,7 +21,6 @@ from langchain_community.document_loaders import PyPDFLoader
 db.setup_database()
 
 # --- Page Config ---
-# FIX: Changed page_icon from a local path to a URL to prevent unicode errors.
 st.set_page_config(
     page_title="Saveetha HR Assistant",
     page_icon="https://www.saveetha.ac.in/images/sec-logo.png",
@@ -127,7 +126,6 @@ def show_auth_pages():
                         st.rerun()
                 else:
                     st.error("Invalid email or password.")
-        # FIX: Changed button type from "link" to "secondary"
         if st.button("Forgot Password?", type="secondary"):
             st.session_state.page_state = "forgot_password"
             st.rerun()
@@ -151,11 +149,40 @@ def show_auth_pages():
 
     elif st.session_state.page_state == "forgot_password":
         st.title("Forgot Password")
-        # ... (folded for brevity) ...
+        with st.form("forgot_password_form"):
+            email = st.text_input("Enter your registered email address")
+            if st.form_submit_button("Send Reset Link"):
+                token = db.set_reset_token(email)
+                if token:
+                    app_base_url = "http://localhost:8501" 
+                    reset_link = f"{app_base_url}?page=reset_password&token={token}"
+                    body = f"Click the link to reset your password: {reset_link}\nThis link is valid for one hour."
+                    if send_email(email, "Password Reset", body):
+                        st.success("A password reset link has been sent to your email.")
+                else:
+                    st.error("If this email is registered, a reset link has been sent.")
+        if st.button("← Back to Sign In"):
+            st.session_state.page_state = "signin"
+            st.rerun()
 
     elif st.session_state.page_state == "reset_password":
         st.title("Reset Your Password")
-        # ... (folded for brevity) ...
+        token = st.session_state.get("reset_token")
+        with st.form("reset_password_form"):
+            new_password = st.text_input("Enter new password", type="password")
+            confirm_password = st.text_input("Confirm new password", type="password")
+            if st.form_submit_button("Reset Password"):
+                if new_password and new_password == confirm_password:
+                    if db.reset_password(token, new_password):
+                        st.success("Your password has been reset successfully! Please sign in.")
+                        st.session_state.page_state = "signin"
+                        del st.session_state.reset_token
+                        st.query_params.clear()
+                        st.rerun()
+                    else:
+                        st.error("Invalid or expired reset link.")
+                else:
+                    st.error("Passwords do not match.")
 
 # --- Main App Logic (Runs only if authenticated) ---
 if not st.session_state.get("authenticated", False):
@@ -174,10 +201,12 @@ else:
             device=-1 # Use CPU
         )
         prompt_template = """
-        Use the context from the documents to answer the question.
-        If you don't know the answer, say that you don't know.
+        Use the context from the documents to answer the question concisely and clearly.
+        If you don't know the answer from the context provided, say that you don't have information on that topic.
+        
         Context: {context}
         Question: {question}
+        
         Answer: """
         PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
         qa_chain = RetrievalQA.from_chain_type(
@@ -213,11 +242,14 @@ else:
                     loader = PyPDFLoader(tmp_file.name)
                     text = " ".join(page.page_content for page in loader.load())[:15000]
 
+                    if "analysis_result" in st.session_state:
+                        del st.session_state.analysis_result
+
                     if summarize_button:
-                        prompt_text = f"Summarize this document in 5 bullet points:\n\n{text}"
+                        prompt_text = f"Summarize this document in 5 clear bullet points:\n\n{text}"
                         st.session_state.analysis_result = llm.invoke(prompt_text)
                     elif keywords_button:
-                        prompt_text = f"Extract 10 key topics from this text as a comma-separated list:\n\n{text}"
+                        prompt_text = f"Extract the 10 most important keywords or topics from this text as a comma-separated list:\n\n{text}"
                         st.session_state.analysis_result = llm.invoke(prompt_text)
                 os.remove(tmp_file.name)
 
@@ -253,10 +285,11 @@ else:
             st.markdown(prompt)
 
         with st.chat_message("assistant", avatar=bot_logo_url):
+            full_response = ""
             if profanity.contains_profanity(prompt):
-                response = "I cannot process requests with inappropriate language."
+                full_response = "I cannot process requests with inappropriate language."
             elif prompt.lower().strip() in greetings:
-                response = "Hello! How can I assist you with our college policies today?"
+                full_response = "Hello! How can I assist you with our college policies today?"
             else:
                 with st.spinner("Searching internal documents..."):
                     result = qa_chain.invoke({"query": prompt})
@@ -264,9 +297,10 @@ else:
                     sources = result.get("source_documents")
                     if sources:
                         doc_names = list(set([os.path.basename(s.metadata.get('source', 'N/A')) for s in sources]))
-                        response = f"{answer}\n\n*Sources: {', '.join(doc_names)}*"
+                        full_response = f"{answer}\n\n*Sources: {', '.join(doc_names)}*"
                     else:
-                        response = answer
-            st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
+                        full_response = answer
+            
+            st.markdown(full_response)
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
 
