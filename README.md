@@ -8,31 +8,31 @@ The primary goal is to enhance organizational efficiency by making policy inform
 
 ## Key Features
 
-       Internal Knowledge Base: Answers questions based only on the official SEC HR policy documents provided.
+Internal Knowledge Base: Answers questions based only on the official SEC HR policy documents provided.
 
-       RAG Pipeline: Utilizes a Retrieval-Augmented Generation (RAG) system to find relevant information within the documents and generate concise answers.
+RAG Pipeline: Utilizes a Retrieval-Augmented Generation (RAG) system to find relevant information within the documents and generate concise answers.
 
-       Secure Authentication: Features a robust login system:
+Secure Authentication: Features a robust login system:
 
-       User registration with email and password.
+User registration with email and password.
 
-       Secure sign-in with password verification.
+Secure sign-in with password verification.
 
-       Two-Factor Authentication (2FA) via email OTP.
+Two-Factor Authentication (2FA) via email OTP.
 
-       "Forgot Password" functionality with secure reset links.
+"Forgot Password" functionality with secure reset links.
 
-       Document Analysis Tools: Allows authenticated users to upload their own PDF documents for:
+Document Analysis Tools: Allows authenticated users to upload their own PDF documents for:
 
-       Summarization: Get quick bullet-point summaries.
+Summarization: Get quick bullet-point summaries.
 
-       Keyword Extraction: Identify key topics within the document.
+Keyword Extraction: Identify key topics within the document.
 
-       Content Filtering: Includes a profanity filter to maintain a professional interaction environment.
+Content Filtering: Includes a profanity filter to maintain a professional interaction environment.
 
-       Custom UI: Features a user interface themed with Saveetha Engineering College branding.
+Custom UI: Features a user interface themed with Saveetha Engineering College branding.
 
-       Persistent User Data: Uses an SQLite database (user_database.db) to store user accounts securely.
+Persistent User Data: Uses an SQLite database (user_database.db) to store user accounts securely.
 
 ## Technology Stack
 
